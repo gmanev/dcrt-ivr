@@ -10,7 +10,8 @@ sub ivr {
   my $class = $self->input('arg_1');
   my $config_file = $self->input('arg_2');
   load_module($class);
-  my $ivr = $class->new($config_file);
+  my $ivr = $class->new();
+  $ivr->config()->file($config_file) if $config_file;
   $ivr->run($self);
 }
 

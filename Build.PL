@@ -24,8 +24,8 @@ my $m = $class->new (
   pm_files =>
 	{
 	    'lib/AGIService.pm'            	=> 'lib/Dcrt/AGIService.pm',
-	    'lib/IVR/RegisterCode.pm'      	=> 'lib/Dcrt/IVR/RegisterCode.pm'
-#	    'lib/IVR/RecordCode.pm'       	=> 'lib/Dcrt/IVR/RecordCode.pm',
+	    'lib/IVR/RegisterCode.pm'      	=> 'lib/Dcrt/IVR/RegisterCode.pm',
+	    'lib/IVR/RecordCode.pm'       	=> 'lib/Dcrt/IVR/RecordCode.pm'
 	},
 	script_files => [qw(
 	)],
