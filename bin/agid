@@ -1,0 +1,16 @@
+#!/usr/bin/perl -w
+
+use strict;
+use lib 'blib/lib';
+use Dcrt::AGIService;
+
+BEGIN {
+  use vars qw($service);
+  $SIG{__WARN__} = sub {
+    $service->log(0, @_);
+  };
+}
+
+$service = Dcrt::AGIService->new();
+$service->run;
+

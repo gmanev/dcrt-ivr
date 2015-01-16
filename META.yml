@@ -1,7 +1,7 @@
 ---
 abstract: 'Dcrt IVR'
 author:
-  - 'Newtech-BT Ltd <support@newtech-bt.bg>'
+  - 'Georgi Manev <gmanev@newtech-bt.bg>'
 build_requires: {}
 configure_requires:
   Module::Build: 0.38
@@ -12,8 +12,21 @@ meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
 name: dcrt-ivr
+provides:
+  Dcrt::AGIService:
+    file: lib/AGIService.pm
+    version: 0
+  Dcrt::AGIService::LogHandle:
+    file: lib/LogHandle.pm
+    version: 0
+  Dcrt::IVR::RecordCode:
+    file: lib/IVR/RecordCode.pm
+    version: 0
+  Dcrt::IVR::RegisterCode:
+    file: lib/IVR/RegisterCode.pm
+    version: 0
 requires:
-  Asterisk::AGI: 0
+  Asterisk::FastAGI: 0.02
 resources:
   license: http://opensource.org/licenses/gpl-license.php
 version: v0.0.1

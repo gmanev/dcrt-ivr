@@ -1,7 +1,7 @@
 {
    "abstract" : "Dcrt IVR",
    "author" : [
-      "Newtech-BT Ltd <support@newtech-bt.bg>"
+      "Georgi Manev <gmanev@newtech-bt.bg>"
    ],
    "dynamic_config" : 1,
    "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.120630",
@@ -21,8 +21,26 @@
       },
       "runtime" : {
          "requires" : {
-            "Asterisk::AGI" : "0"
+            "Asterisk::FastAGI" : "0.02"
          }
+      }
+   },
+   "provides" : {
+      "Dcrt::AGIService" : {
+         "file" : "lib/AGIService.pm",
+         "version" : 0
+      },
+      "Dcrt::AGIService::LogHandle" : {
+         "file" : "lib/LogHandle.pm",
+         "version" : 0
+      },
+      "Dcrt::IVR::RecordCode" : {
+         "file" : "lib/IVR/RecordCode.pm",
+         "version" : 0
+      },
+      "Dcrt::IVR::RegisterCode" : {
+         "file" : "lib/IVR/RegisterCode.pm",
+         "version" : 0
       }
    },
    "release_status" : "stable",

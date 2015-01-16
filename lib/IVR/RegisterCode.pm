@@ -2,7 +2,6 @@ package Dcrt::IVR::RegisterCode;
 
 use strict;
 use AppConfig qw(:argcount);
-use HTTP::Request;
 use LWP::UserAgent;
 
 sub new {
@@ -38,12 +37,17 @@ sub new {
 
   $config->define("register_timeout", {
 	  ARGCOUNT => ARGCOUNT_ONE,
-	  DEFAULT  => 10000,
+	  DEFAULT  => 5000,
   });
 
   $config->define("register_maxdigits", {
 	  ARGCOUNT => ARGCOUNT_ONE,
 	  DEFAULT  => 10,
+  });
+
+  $config->define("register_maxerrors", {
+	  ARGCOUNT => ARGCOUNT_ONE,
+	  DEFAULT  => 2,
   });
 
   $config->define("lwp_timeout", {
@@ -71,12 +75,13 @@ sub new {
   return ($self);
 }
 
-# get module configuration
+# get module config
 sub config {
   my $self = shift;
   return $self->{config};
 }
 
+# entry point
 sub run {
   my $self = shift;
   my $service = shift;
@@ -89,35 +94,47 @@ sub run {
 
   $agi->answer();
 
-  my $code = '-2'; # invalid callerid
+  my $errors = 0; # consecutive errors counter
+  my $code = '';  #
+  # check for valid callerid
   if ($callerid =~ /^\d+$/) {
-    # first attempt
+    # play greeting
     $code = $agi->get_data(
       $config->register_audio_start,
       $config->register_timeout,
       $config->register_maxdigits
-    );
+    ) || '';
   }
   else {
+    $errors = $config->register_maxerrors;
     $service->log(1, "%s|REGISTER_BLOCK|%s", $callid, $callerid);
   }
 
-  my $errors = 0; # error counter
-  while ($code ne '-2' && $code ne '-1' && $code ne '' && $errors < 2) {
-    # prepare webservice request
-    my $json = '{"username":"foo","password":"bar"}';
-    my $req = HTTP::Request->new( 'POST', $config->register_uri );
-    $req->header( 'Content-Type' => 'application/json' );
-    $req->content( $json );
-    # call the webservice
-    my %options = $config->varlist("^lwp_", 1);
-    my $lwp = LWP::UserAgent->new(%options);
-    my $t_start = time();
-    my $response = $lwp->request( $req );
-    my $ttime = time() - $t_start;
+  # $code == -1 when caller hangup
+  while ($code ne '-1' && $errors < $config->register_maxerrors) {
+    my $status = '';
+    my $is_success = 0;
+    if ($code ne '') {
+      # call the webservice
+      my %options = $config->varlist("^lwp_", 1);
+      my $ua = LWP::UserAgent->new(%options);
+      my $t_start = time();
+      my $response = $ua->get( $config->register_uri."/$callerid/$code" );
+      my $ttime = time() - $t_start;
+      $status = $response->status_line;
+      # check response
+      if ($response->is_success) {
+        my $content = $response->decoded_content;
+        $is_success = $content eq '0';
+        $status .= " [$content]";
+      }
+      else {
+        $status .= " [$ttime]";
+      }
+    }
 
-    if ($response->is_success) {
-      $service->log(1, "%s|REGISTER_PASS|%s", $callid, $response->status_line()." [$ttime]");
+    if ($is_success) {
+      $service->log(1, "%s|REGISTER_PASS|%s", $callid, $status);
       # reset error counter
       $errors = 0;
       # play confirmation
@@ -125,22 +142,22 @@ sub run {
         $config->register_audio_pass,
         $config->register_timeout,
         $config->register_maxdigits
-      );
+      ) || '';
     }
     else {
-      $service->log(1, "%s|REGISTER_FAIL|%s", $callid, $response->status_line()." [$ttime]");
-      if (++$errors < 2) {
+      $service->log(1, "%s|REGISTER_FAIL|%s", $callid, $status);
+      if (++$errors < $config->register_maxerrors) {
         # try again
         $code = $agi->get_data(
           $config->register_audio_fail,
           $config->register_timeout,
           $config->register_maxdigits
-        );
+        ) || '';
       }
     }
   } # while
   
-  if ($code ne '' && $config->register_audio_helpdesk) {
+  if ($errors && $code ne '-1' && $config->register_audio_helpdesk) {
     $service->log(1, "%s|REGISTER_HELPDESK|%s", $callid, $code);
     # connect to helpdesk
     $agi->stream_file( $config->register_audio_helpdesk );

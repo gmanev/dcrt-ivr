@@ -5,7 +5,7 @@ use base 'Asterisk::FastAGI';
 use Carp;
 
 sub ivr {
-	my $self = shift;
+  my $self = shift;
 
   my $class = $self->input('arg_1');
   my $config_file = $self->input('arg_2');
@@ -20,6 +20,8 @@ sub load_module {
     croak $@ if $@;
     $_[0]->import(@_[1 .. $#_]);
 }
+
+
 
 1;
 __END__

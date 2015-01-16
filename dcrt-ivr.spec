@@ -1,24 +1,28 @@
 #
-%define pkgname evn-voice
+%define pkgname dcrt-ivr
 %define filelist %{pkgname}-%{version}-filelist
 %define NVR %{pkgname}-%{version}-%{release}
-%define maketest 0
+%define maketest 1
 
 name:      dcrt-ivr
 summary:   Dcrt IVR
 version:   0.0.1
 Release:   1
-vendor:    Newtech-BT Ltd
+vendor:    Newtech-BT Ltd <support@newtech-bt.bg>
 packager:  Newtech-BT Ltd <support@newtech-bt.bg>
 license:   GPL
 group:     Applications/Communications
 url:       http://www.newtech-bt.bg
 buildroot: %{_tmppath}/%{name}-%{version}-%(id -u -n)
-buildarch: x86_64
+buildarch: noarch
 prefix:    %(echo %{_prefix})
 Source:    %{name}-%{version}.tar.gz
 AutoReqProv: no
-Requires:  
+Requires:  perl-AppConfig,perl-libwww-perl
+Requires(post): chkconfig
+Requires(preun): chkconfig
+# This is for /sbin/service
+Requires(preun): initscripts
 
 %description
 Dcrt IVR.
@@ -102,10 +106,28 @@ find %{buildroot}%{_prefix}             \
 
 %files -f %filelist
 %defattr(-,root,root)
+%config /etc/rc.d/init.d/agid
+%config /etc/sysconfig/agid
+%config /etc/agid.conf
 
 %pre
 
 %post
+# This adds the proper /etc/rc*.d links for the script
+/sbin/chkconfig --add agid
+
+%preun
+if [ $1 -eq 0 ] ; then
+    /sbin/service agid stop >/dev/null 2>&1
+    /sbin/chkconfig --del agid
+fi
+
+%postun
+if [ "$1" -ge "1" ] ; then
+    /sbin/service agid condrestart >/dev/null 2>&1 || :
+fi
 
 %changelog
+* Mon Jan 19 2015 Georgi Manev, 0.0.1
+- initial release
 
