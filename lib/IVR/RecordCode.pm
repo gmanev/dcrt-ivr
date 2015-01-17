@@ -77,7 +77,7 @@ sub run {
   $agi->answer();
 
   my $filename = $config->record_directory."/".$callerid."_".time();
-  my $code = '-2'; # invalid callerid
+  my $code = '-1'; # invalid callerid
   if ($callerid =~ /^\d+$/) {
     $service->log_info('RECORD_ALLOW', $callerid);
     # first attempt
@@ -91,13 +91,12 @@ sub run {
         $config->record_beep,
         $config->record_silence
       );
+      $service->log_info('RECORD_RESULT', $code);
     }
   }
   else {
     $service->log_info('RECORD_DENY', $callerid);
   }
-
-  $service->log_info('RECORD_RESULT', $code);
 
   while ($code ne '-1') {
     $service->log_info('RECORD_SUCCESS', $filename);
