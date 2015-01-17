@@ -41,7 +41,7 @@ sub new {
 
   $config->define("record_silence", {
 	  ARGCOUNT => ARGCOUNT_ONE,
-	  DEFAULT  => '5000',
+	  DEFAULT  => '5',
   });
 
   $config->define("record_audio_start", {
@@ -49,7 +49,7 @@ sub new {
 	  DEFAULT  => '',
   });
 
-  $config->define("record_audio_recorded", {
+  $config->define("record_audio_success", {
 	  ARGCOUNT => ARGCOUNT_ONE,
 	  DEFAULT  => '',
   });
@@ -72,16 +72,16 @@ sub run {
   my $config = $self->config;
   my $agi = $service->agi;
 
-  my $callid = $service->input('uniqueid');
   my $callerid = $service->input('callerid');
 
   $agi->answer();
 
   my $filename = $config->record_directory."/".$callerid."_".time();
-  my $code = -2; # invalid callerid
+  my $code = '-2'; # invalid callerid
   if ($callerid =~ /^\d+$/) {
+    $service->log_info('RECORD_ALLOW', $callerid);
     # first attempt
-    if (($code = $agi->stream_file( $config->record_audio_start )) == 0) {
+    if (($code = $agi->stream_file( $config->record_audio_start )) eq '0') {
       $code = $agi->record_file(
         $filename,
         $config->record_format,
@@ -94,12 +94,14 @@ sub run {
     }
   }
   else {
-    $service->log(1, "%s|RECORD_BLOCK|%s", $callid, $callerid);
+    $service->log_info('RECORD_DENY', $callerid);
   }
 
-  while ($code == 1) {
-    $service->log(1, "%s|RECORD_PASS|%s", $callid, $filename);
-    if (($code = $agi->stream_file( $config->record_audio_recorded )) == 0) {
+  $service->log_info('RECORD_RESULT', $code);
+
+  while ($code ne '-1') {
+    $service->log_info('RECORD_SUCCESS', $filename);
+    if (($code = $agi->stream_file( $config->record_audio_success )) eq '0') {
       $filename = $config->record_directory."/".$callerid."_".time();
       $code = $agi->record_file(
         $filename,

@@ -89,15 +89,15 @@ sub run {
   my $config = $self->config;
   my $agi = $service->agi;
 
-  my $callid = $service->input('uniqueid');
+  my $errors = 0; # consecutive errors counter
+  my $code = '';
   my $callerid = $service->input('callerid');
 
   $agi->answer();
 
-  my $errors = 0; # consecutive errors counter
-  my $code = '';  #
   # check for valid callerid
   if ($callerid =~ /^\d+$/) {
+    $service->log_info('REGISTER_ALLOW', $callerid);
     # play greeting
     $code = $agi->get_data(
       $config->register_audio_start,
@@ -107,7 +107,7 @@ sub run {
   }
   else {
     $errors = $config->register_maxerrors;
-    $service->log(1, "%s|REGISTER_BLOCK|%s", $callid, $callerid);
+    $service->log_info('REGISTER_DENY', $callerid);
   }
 
   # $code == -1 when caller hangup
@@ -115,26 +115,22 @@ sub run {
     my $status = '';
     my $is_success = 0;
     if ($code ne '') {
+      $service->log_info('REGISTER_DTMF', $code);
       # call the webservice
       my %options = $config->varlist("^lwp_", 1);
       my $ua = LWP::UserAgent->new(%options);
-      my $t_start = time();
       my $response = $ua->get( $config->register_uri."/$callerid/$code" );
-      my $ttime = time() - $t_start;
       $status = $response->status_line;
+      $service->log_info('REGISTER_WEBSERVICE', $status);
       # check response
       if ($response->is_success) {
-        my $content = $response->decoded_content;
-        $is_success = $content eq '0';
-        $status .= " [$content]";
-      }
-      else {
-        $status .= " [$ttime]";
+        $status = $response->decoded_content;
+        $is_success = $status eq '0';
       }
     }
 
     if ($is_success) {
-      $service->log(1, "%s|REGISTER_PASS|%s", $callid, $status);
+      $service->log_info('REGISTER_PASS', $status);
       # reset error counter
       $errors = 0;
       # play confirmation
@@ -145,7 +141,7 @@ sub run {
       ) || '';
     }
     else {
-      $service->log(1, "%s|REGISTER_FAIL|%s", $callid, $status);
+      $service->log_info('REGISTER_FAIL', $status);
       if (++$errors < $config->register_maxerrors) {
         # try again
         $code = $agi->get_data(
@@ -156,11 +152,11 @@ sub run {
       }
     }
   } # while
-  
-  if ($errors && $code ne '-1' && $config->register_audio_helpdesk) {
-    $service->log(1, "%s|REGISTER_HELPDESK|%s", $callid, $code);
+
+  if ($errors && $code ne '-1' && $config->helpdesk_extension) {
+    $service->log_info('REGISTER_HELPDESK', $config->helpdesk_extension);
     # connect to helpdesk
-    $agi->stream_file( $config->register_audio_helpdesk );
+    $agi->stream_file( $config->register_audio_helpdesk ) if $config->register_audio_helpdesk;
     $agi->set_context( $config->helpdesk_context );
     $agi->set_extension( $config->helpdesk_extension );
     $agi->set_priority( $config->helpdesk_priority );
